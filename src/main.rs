@@ -250,22 +250,23 @@ enum MouseButton {
 #[derive(Args)]
 struct RenderArgs {
     /// Cell width used for terminal geometry and rendering.
-    #[arg(long, default_value_t = 9)]
+    #[arg(long, env = "TERMCTRL_CELL_WIDTH", default_value_t = 9)]
     cell_width: u16,
     /// Cell height used for terminal geometry and rendering.
-    #[arg(long, default_value_t = 18)]
+    #[arg(long, env = "TERMCTRL_CELL_HEIGHT", default_value_t = 18)]
     cell_height: u16,
     /// Outer padding around the rendered terminal in pixels.
-    #[arg(long, default_value_t = 18.0)]
+    #[arg(long, env = "TERMCTRL_PADDING", default_value_t = 18.0)]
     padding: f32,
     /// Font family used in SVG/PNG output.
     #[arg(
         long,
+        env = "TERMCTRL_FONT_FAMILY",
         default_value = "JetBrains Mono, SFMono-Regular, Menlo, monospace"
     )]
     font_family: String,
     /// Scale PNG output for sharp HiDPI viewing; SVG output is unchanged.
-    #[arg(long, default_value_t = 2.0)]
+    #[arg(long, env = "TERMCTRL_PIXEL_RATIO", default_value_t = 2.0)]
     pixel_ratio: f32,
     /// Hide the terminal cursor in rendered output.
     #[arg(long)]
@@ -366,10 +367,10 @@ struct StartArgs {
     #[arg(long, default_value_t = 24)]
     rows: u16,
     /// Terminal cell width in pixels.
-    #[arg(long, default_value_t = 9)]
+    #[arg(long, env = "TERMCTRL_CELL_WIDTH", default_value_t = 9)]
     cell_width: u16,
     /// Terminal cell height in pixels.
-    #[arg(long, default_value_t = 18)]
+    #[arg(long, env = "TERMCTRL_CELL_HEIGHT", default_value_t = 18)]
     cell_height: u16,
     /// Maximum raw terminal bytes retained by the live session.
     #[arg(long, default_value_t = 16 * 1024 * 1024)]
@@ -403,10 +404,10 @@ struct RunArgs {
     #[arg(long, default_value_t = 24)]
     rows: u16,
     /// Terminal cell width in pixels.
-    #[arg(long, default_value_t = 9)]
+    #[arg(long, env = "TERMCTRL_CELL_WIDTH", default_value_t = 9)]
     cell_width: u16,
     /// Terminal cell height in pixels.
-    #[arg(long, default_value_t = 18)]
+    #[arg(long, env = "TERMCTRL_CELL_HEIGHT", default_value_t = 18)]
     cell_height: u16,
     /// Maximum raw terminal bytes retained by the live session.
     #[arg(long, default_value_t = 16 * 1024 * 1024)]
@@ -627,22 +628,23 @@ struct VideoArgs {
     /// Recording created by `termctrl start --record`.
     input: PathBuf,
     /// Override the recorded terminal cell width in rendered pixels.
-    #[arg(long)]
+    #[arg(long, env = "TERMCTRL_CELL_WIDTH")]
     cell_width: Option<u16>,
     /// Override the recorded terminal cell height in rendered pixels.
-    #[arg(long)]
+    #[arg(long, env = "TERMCTRL_CELL_HEIGHT")]
     cell_height: Option<u16>,
     /// Outer padding around the rendered terminal in pixels.
-    #[arg(long, default_value_t = 18.0)]
+    #[arg(long, env = "TERMCTRL_PADDING", default_value_t = 18.0)]
     padding: f32,
     /// Font family used in video output.
     #[arg(
         long,
+        env = "TERMCTRL_FONT_FAMILY",
         default_value = "JetBrains Mono, SFMono-Regular, Menlo, monospace"
     )]
     font_family: String,
     /// Scale video frames for sharp HiDPI viewing.
-    #[arg(long, default_value_t = 2.0)]
+    #[arg(long, env = "TERMCTRL_PIXEL_RATIO", default_value_t = 2.0)]
     pixel_ratio: f32,
     /// Output video file path.
     #[arg(short, long, default_value = "video.mp4")]
@@ -1455,6 +1457,45 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn render_options_read_environment_defaults() {
+        use clap::CommandFactory;
+        let cli = Cli::command();
+        let env_of = |subcommand: &str, arg: &str| {
+            cli.find_subcommand(subcommand)
+                .unwrap_or_else(|| panic!("{subcommand} subcommand"))
+                .get_arguments()
+                .find(|candidate| candidate.get_id() == arg)
+                .unwrap_or_else(|| panic!("{subcommand} --{arg}"))
+                .get_env()
+                .map(|value| value.to_string_lossy().into_owned())
+        };
+        for subcommand in ["save", "video"] {
+            assert_eq!(
+                env_of(subcommand, "font_family").as_deref(),
+                Some("TERMCTRL_FONT_FAMILY")
+            );
+            assert_eq!(
+                env_of(subcommand, "pixel_ratio").as_deref(),
+                Some("TERMCTRL_PIXEL_RATIO")
+            );
+            assert_eq!(
+                env_of(subcommand, "padding").as_deref(),
+                Some("TERMCTRL_PADDING")
+            );
+        }
+        for subcommand in ["save", "video", "start", "run"] {
+            assert_eq!(
+                env_of(subcommand, "cell_width").as_deref(),
+                Some("TERMCTRL_CELL_WIDTH")
+            );
+            assert_eq!(
+                env_of(subcommand, "cell_height").as_deref(),
+                Some("TERMCTRL_CELL_HEIGHT")
+            );
+        }
+    }
 
     #[test]
     fn preserves_ordered_input_events() {

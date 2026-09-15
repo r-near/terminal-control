@@ -95,6 +95,13 @@ termctrl save --format png --format txt --out captures/model -- my-terminal-app
 
 The second command writes `captures/model.png` and `captures/model.txt`. Raw ANSI artifacts can contain sensitive terminal data and require explicit `--format ansi`.
 
+Rendering options have environment defaults so a machine can keep one look without repeating flags. `TERMCTRL_FONT_FAMILY`, `TERMCTRL_CELL_WIDTH`, `TERMCTRL_CELL_HEIGHT`, `TERMCTRL_PADDING`, and `TERMCTRL_PIXEL_RATIO` apply to `save` and `video`; the cell sizes also apply to `start` and `run`. Explicit flags still win:
+
+```bash
+export TERMCTRL_FONT_FAMILY="FiraCode Nerd Font" TERMCTRL_CELL_WIDTH=10 TERMCTRL_CELL_HEIGHT=20
+termctrl save --format png --out captures/home.png -- my-terminal-app
+```
+
 ## Drive A Live Session
 
 Use a named session when several interactions target the same running application:
@@ -269,3 +276,4 @@ See [docs/typescript-client.md](docs/typescript-client.md) for artifacts, record
 - `--host opentui` answers startup probes needed by current OpenTUI applications.
 - Terminal state and reflow use the statically linked Ghostty terminal core; renderers export PNG, SVG, JSON, text, and raw ANSI artifacts.
 - Run `termctrl <command> --help` for dimensions, timing, color, rendering, and output options.
+- `TERMCTRL_FONT_FAMILY`, `TERMCTRL_CELL_WIDTH`, `TERMCTRL_CELL_HEIGHT`, `TERMCTRL_PADDING`, and `TERMCTRL_PIXEL_RATIO` set rendering defaults for `save`, `video`, `start`, and `run`.

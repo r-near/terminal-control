@@ -119,6 +119,10 @@ Save only requested formats:
 termctrl save app --format txt --format png --out artifacts/current
 ```
 
+Rendering flags (`--font-family`, `--cell-width`, `--cell-height`, `--padding`, `--pixel-ratio`) read
+defaults from `TERMCTRL_FONT_FAMILY`, `TERMCTRL_CELL_WIDTH`, `TERMCTRL_CELL_HEIGHT`, `TERMCTRL_PADDING`,
+and `TERMCTRL_PIXEL_RATIO`, so a machine with a preferred font can set them once; explicit flags still win.
+
 Record demos only when the user wants a retained timeline or video. Add markers while the session is running, inspect them after stopping, then export with an explicit edit plan:
 
 ```bash
