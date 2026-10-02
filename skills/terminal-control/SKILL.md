@@ -119,10 +119,6 @@ Save only requested formats:
 termctrl save app --format txt --format png --out artifacts/current
 ```
 
-Rendering flags (`--font-family`, `--cell-width`, `--cell-height`, `--padding`, `--pixel-ratio`) read
-defaults from `TERMCTRL_FONT_FAMILY`, `TERMCTRL_CELL_WIDTH`, `TERMCTRL_CELL_HEIGHT`, `TERMCTRL_PADDING`,
-and `TERMCTRL_PIXEL_RATIO`, so a machine with a preferred font can set them once; explicit flags still win.
-
 Record demos only when the user wants a retained timeline or video. Add markers while the session is running, inspect them after stopping, then export with an explicit edit plan:
 
 ```bash
@@ -142,10 +138,66 @@ Use edit-plan `speed` values conservatively when terminal text should remain rea
 
 Treat `.termctrl` recordings, ANSI transcripts, screen artifacts, command arguments, and terminal input as potentially sensitive. Do not retain them unless needed, and do not expose their contents unnecessarily.
 
+## Render Polished Screenshots And Videos
+
+PNG, SVG, and video output draw box-drawing, block, braille, Powerline, and ◆◇●○ glyphs as
+geometry and render all other text with system fonts and per-glyph fallback, so the result looks
+only as good as the font covering the application's glyphs.
+
+Use a Nerd Font. The default family (JetBrains Mono) lacks common spinner and arrow glyphs such as
+◐◓◑◒ and ↳, and the fallback font renders them oversized and misaligned. Nerd Fonts also carry the
+icon glyphs that prompt themes and TUIs use. Check with `fc-list | grep -i "nerd font"`; if none is
+installed, ask before installing one, for example FiraCode Nerd Font:
+
+```bash
+# Linux
+mkdir -p ~/.local/share/fonts/FiraCodeNerdFont
+curl -fsSL https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.tar.xz | tar -xJ -C ~/.local/share/fonts/FiraCodeNerdFont
+fc-cache -f
+# macOS
+brew install --cask font-fira-code-nerd-font
+```
+
+Set rendering defaults once per machine instead of repeating flags; explicit flags still win:
+
+```bash
+export TERMCTRL_FONT_FAMILY="FiraCode Nerd Font" TERMCTRL_CELL_WIDTH=10 TERMCTRL_CELL_HEIGHT=20
+```
+
+`TERMCTRL_FONT_FAMILY`, `TERMCTRL_PADDING`, and `TERMCTRL_PIXEL_RATIO` apply to `save` and `video`;
+`TERMCTRL_CELL_WIDTH` and `TERMCTRL_CELL_HEIGHT` also apply to `start` and `run`. The default pixel
+ratio of 2 is already sharp on HiDPI screens; use 3 only for print or zoomed crops. Add
+`--hide-cursor` to stills.
+
+There is no palette flag, but the renderer reads colours back from the terminal core, so OSC 10, 11,
+and 4 sequences printed before the application starts set the foreground, background, and 16 ANSI
+colours. `catppuccin-mocha.osc` in this skill's directory is a ready-made Catppuccin Mocha prefix.
+Replace `SKILL_DIR` with that directory:
+
+```bash
+termctrl save --cols 120 --rows 30 --hide-cursor --format png --out artifacts/out.png -- \
+  bash -c 'cat SKILL_DIR/catppuccin-mocha.osc; my-cli --flag'
+```
+
+For an application that prompts before the screen worth capturing, keep the shell alive in a named
+session, answer the prompt, then save:
+
+```bash
+termctrl start app --cols 120 --rows 30 -- bash -c 'cat SKILL_DIR/catppuccin-mocha.osc; my-cli; sleep 300'
+termctrl wait app "Proceed?" && termctrl send app enter && termctrl wait app "Done" --timeout 90000
+termctrl save app --hide-cursor --format png --out artifacts/out.png
+termctrl stop app
+```
+
+- Set `--rows` to the number of output lines plus one so the image has no empty band at the bottom.
+- `save --input transcript.ansi` replays the bytes through the emulator, so the file needs CRLF line
+  endings (`perl -pe 's/\r?\n/\r\n/'`). Bare LF only moves down a row and produces a staircase.
+- `├` is drawn with a deliberately short right arm and reads as a small tick beside text.
+
 ## Recover From Problems
 
 - Run `termctrl status app` to inspect state and launch settings.
 - Run `termctrl list` to discover running named sessions. Add `--state`, `--command`, or `--cwd` when narrowing discovery; use `--all` only when retained exited or unavailable entries are relevant.
 - MCP agents can pass `state`, `command`, or `cwd` to `list_sessions` and use `get_session_status({ name })` for complete structured status without parsing CLI output.
 - If a session socket path is too long, set `TERMCTRL_RUNTIME_DIR` to a short private directory under `/tmp` before starting sessions.
-- If `termctrl` is unavailable, install Terminal Control with `cargo install terminal-control` or ask the user which installed binary to use.
+- If `termctrl` is unavailable, install this fork's prebuilt binary with `curl -fsSL https://raw.githubusercontent.com/r-near/terminal-control/main/install.sh | sh`, build it with `cargo install --locked --git https://github.com/r-near/terminal-control terminal-control`, or ask the user which installed binary to use. Upstream `cargo install terminal-control` lacks the `TERMCTRL_*` rendering defaults.
