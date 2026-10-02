@@ -11,18 +11,21 @@ Saved from one live OpenCode session using `start`, `send`, and `save`.
 
 ## Install
 
-Source builds require Rust 1.93 or newer, Zig 0.15.2, Git, and network access while the pinned
-Ghostty terminal core is built. Video export also requires `ffmpeg`.
+This is r-near's fork of [anomalyco/terminal-control](https://github.com/anomalyco/terminal-control).
+It adds `TERMCTRL_*` environment defaults for rendering options, plus skill guidance for Nerd Fonts
+and terminal themes. Install the prebuilt binary for macOS (arm64, x64) or Linux (arm64, x64 glibc):
 
 ```bash
-cargo install --locked terminal-control
+curl -fsSL https://raw.githubusercontent.com/r-near/terminal-control/main/install.sh | sh
 termctrl --help
 ```
 
-Or install the current repository head:
+Binaries are attached to each [release](https://github.com/r-near/terminal-control/releases). Video
+export also requires `ffmpeg`. To build from source instead, install Rust 1.93 or newer, Zig 0.15.2,
+and Git, with network access while the pinned Ghostty terminal core is built:
 
 ```bash
-cargo install --locked --git https://github.com/anomalyco/terminal-control terminal-control
+cargo install --locked --git https://github.com/r-near/terminal-control terminal-control
 ```
 
 ## Set Up Your Agent
@@ -30,8 +33,10 @@ cargo install --locked --git https://github.com/anomalyco/terminal-control termi
 Terminal Control is built for agents first. Install the skill so your coding agent knows the workflow:
 
 ```bash
-npx skills add anomalyco/terminal-control --skill terminal-control
+npx skills add r-near/terminal-control --skill terminal-control
 ```
+
+The skill keeps the upstream name, so it replaces an existing `terminal-control` install.
 
 Or expose sessions as structured MCP tools instead of shell commands (stdio server):
 

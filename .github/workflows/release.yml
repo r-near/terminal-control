@@ -1,0 +1,60 @@
+name: release
+
+on:
+  push:
+    tags: ["v*-rnear.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build ${{ matrix.package }}
+    strategy:
+      matrix:
+        include:
+          - runner: macos-15
+            package: darwin-arm64
+          - runner: macos-15-intel
+            package: darwin-x64
+          - runner: ubuntu-24.04-arm
+            package: linux-arm64-gnu
+          - runner: ubuntu-24.04
+            package: linux-x64-gnu
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.93"
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+      - run: scripts/build-portable.sh
+      - name: Verify x86-64 baseline CPU compatibility
+        if: matrix.package == 'linux-x64-gnu'
+        run: |
+          set -o pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y qemu-user
+          printf 'portable-terminal' | qemu-x86_64 -cpu qemu64 target/release/termctrl show --input - | grep -Fx portable-terminal
+      - run: tar -czf termctrl-${{ matrix.package }}.tar.gz -C target/release termctrl
+      - uses: actions/upload-artifact@v7
+        with:
+          name: termctrl-${{ matrix.package }}
+          path: termctrl-${{ matrix.package }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: termctrl-*
+          merge-multiple: true
+      - run: sha256sum termctrl-*.tar.gz > SHA256SUMS
+      - run: gh release create "$GITHUB_REF_NAME" termctrl-*.tar.gz SHA256SUMS --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --latest
+        env:
+          GH_TOKEN: ${{ github.token }}
